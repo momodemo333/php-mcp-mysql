@@ -89,7 +89,6 @@ jobs:
         fi
     
     - name: Run PHPUnit tests
-      if: matrix.php-version == '8.3'
       env:
         MYSQL_HOST: 127.0.0.1
         MYSQL_PORT: 3306
@@ -98,13 +97,12 @@ jobs:
         MYSQL_DB: testdb
       run: |
         if [ -f vendor/bin/phpunit ] && [ -f phpunit.xml ]; then
-          vendor/bin/phpunit --coverage-text --testsuite=Integration
+          vendor/bin/phpunit --testsuite=Integration --no-coverage
         else
           echo "PHPUnit not configured, skipping unit tests"
         fi
     
     - name: Run Codeception tests
-      if: matrix.php-version == '8.3'
       env:
         MYSQL_HOST: 127.0.0.1
         MYSQL_PORT: 3306
