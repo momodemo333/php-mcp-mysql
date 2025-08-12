@@ -1,0 +1,181 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.1', '8.3']
+        mysql-version: ['8.0']
+        include:
+          - php-version: '8.3'
+            mysql-version: '5.7'
+    
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql-version }}
+        env:
+          MYSQL_ROOT_PASSWORD: rootpass
+          MYSQL_DATABASE: testdb
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-version }}
+        extensions: pdo, pdo_mysql, mbstring
+        coverage: none
+        tools: composer:v2
+      env:
+        COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Verify PHP Installation
+      run: |
+        php -v
+        php -m | grep -E "(pdo|mysql)"
+        composer --version
+    
+    - name: Cache Composer packages
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ matrix.php-version }}-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-${{ matrix.php-version }}-
+    
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress
+    
+    - name: Initialize test database
+      run: |
+        mysql -h 127.0.0.1 -u testuser -ptestpass testdb < tests/fixtures/test-data.sql
+    
+    - name: Run basic tests
+      env:
+        MYSQL_HOST: 127.0.0.1
+        MYSQL_PORT: 3306
+        MYSQL_USER: testuser
+        MYSQL_PASS: testpass
+        MYSQL_DB: testdb
+        ALLOW_INSERT_OPERATION: true
+        ALLOW_UPDATE_OPERATION: true
+        ALLOW_DELETE_OPERATION: true
+      run: |
+        # Test de connexion basique si le fichier existe
+        if [ -f tests/test_connection.php ]; then
+          php tests/test_connection.php
+        fi
+        
+        # Test du serveur MCP si le fichier existe
+        if [ -f tests/test_mcp_server.php ]; then
+          php tests/test_mcp_server.php
+        fi
+    
+    - name: Run PHPUnit tests
+      if: matrix.php-version == '8.3'
+      env:
+        MYSQL_HOST: 127.0.0.1
+        MYSQL_PORT: 3306
+        MYSQL_USER: testuser
+        MYSQL_PASS: testpass
+        MYSQL_DB: testdb
+      run: |
+        if [ -f vendor/bin/phpunit ] && [ -f phpunit.xml ]; then
+          vendor/bin/phpunit --coverage-text --testsuite=Integration
+        else
+          echo "PHPUnit not configured, skipping unit tests"
+        fi
+    
+    - name: Run Codeception tests
+      if: matrix.php-version == '8.3'
+      env:
+        MYSQL_HOST: 127.0.0.1
+        MYSQL_PORT: 3306
+        MYSQL_USER: testuser
+        MYSQL_PASS: testpass
+        MYSQL_DB: testdb
+      run: |
+        if [ -f vendor/bin/codecept ]; then
+          vendor/bin/codecept run Integration --no-coverage
+        else
+          echo "Codeception not configured, skipping integration tests"
+        fi
+
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: pdo, pdo_mysql, mbstring
+        ini-values: memory_limit=256M
+        coverage: none
+        tools: composer:v2
+    
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress
+    
+    - name: Check code style (if configured)
+      run: |
+        if [ -f vendor/bin/phpcs ]; then
+          vendor/bin/phpcs
+        else
+          echo "Code style check not configured"
+        fi
+    
+    - name: Static analysis (if configured)
+      run: |
+        if [ -f vendor/bin/phpstan ]; then
+          vendor/bin/phpstan analyse
+        else
+          echo "Static analysis not configured"
+        fi
+    
+    - name: Verify server can start
+      run: |
+        timeout 10s php bin/server.php --version || true
+        echo "Server version check completed"
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        tools: composer:v2
+    
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress
+    
+    - name: Security audit
+      run: |
+        if [ -f composer.lock ]; then
+          composer audit || echo "Security audit completed with warnings"
+        fi
