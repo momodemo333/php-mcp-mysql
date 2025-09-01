@@ -10,6 +10,26 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 - Rien pour le moment
 
+## [1.1.1] - 2025-09-01
+
+### Fixed
+- 🐛 **Bug critique DDL résolu** : Les permissions DDL fonctionnent maintenant correctement (Issue #3)
+  - `ALLOW_DDL_OPERATIONS=true` autorise désormais réellement CREATE, ALTER, DROP
+  - `ALLOW_ALL_OPERATIONS=true` prime correctement sur `BLOCK_DANGEROUS_KEYWORDS`
+  - Variables de configuration manquantes ajoutées dans `MySqlServer.php`
+  - Logique de validation corrigée dans `SecurityService.php`
+- ✅ **Résolution définitive** : Fini les erreurs "Mot-clé non autorisé détecté: CREATE/ALTER/DROP"
+- 🧪 **Tests complets ajoutés** : Suite de tests `DDLPermissionsTest.php` pour éviter les régressions
+- 📊 **Capabilities mises à jour** : L'endpoint `/server/capabilities` affiche maintenant l'état DDL et ALL
+
+### Technical Details
+- **Root Cause 1** : Configuration incomplète - `ALLOW_DDL_OPERATIONS` et `ALLOW_ALL_OPERATIONS` non chargées
+- **Root Cause 2** : Logique défaillante - `ALLOW_ALL_OPERATIONS` n'outrepassait pas `BLOCK_DANGEROUS_KEYWORDS`
+- **Commits** : [5d81756](https://github.com/momodemo333/php-mcp-mysql/commit/5d81756)
+
+### Migration automatique
+Aucune action requise. Si vous aviez configuré `ALLOW_DDL_OPERATIONS=true`, cela fonctionne maintenant !
+
 ## [1.1.0] - 2025-01-08
 
 ### Added

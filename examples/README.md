@@ -33,7 +33,8 @@ realpath bin/server.php
 ### 3. Adaptez la configuration
 Modifiez les variables d'environnement selon vos besoins :
 - `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASS`, `MYSQL_DB`
-- Permissions : `ALLOW_INSERT_OPERATION`, `ALLOW_UPDATE_OPERATION`, `ALLOW_DELETE_OPERATION`
+- **Permissions CRUD** : `ALLOW_INSERT_OPERATION`, `ALLOW_UPDATE_OPERATION`, `ALLOW_DELETE_OPERATION`
+- **Permissions DDL** : `ALLOW_DDL_OPERATIONS` (CREATE, ALTER, DROP), `ALLOW_ALL_OPERATIONS` (mode super admin)
 - Limites : `MAX_RESULTS`, `LOG_LEVEL`
 
 ### 4. Redémarrez Claude Code
