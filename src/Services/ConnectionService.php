@@ -93,6 +93,20 @@ class ConnectionService
     }
 
     /**
+     * Ferme définitivement une connexion (Solution 1: fermer/rouvrir systématiquement)
+     */
+    public function closeConnection(\PDO $pdo): void
+    {
+        foreach ($this->connections as $key => $connectionData) {
+            if ($connectionData['pdo'] === $pdo) {
+                unset($this->connections[$key]);
+                $this->logger->debug('Connexion fermée définitivement', ['connection_id' => $key]);
+                return;
+            }
+        }
+    }
+
+    /**
      * Crée une nouvelle connexion PDO
      */
     private function createConnection(): \PDO
@@ -157,7 +171,8 @@ class ConnectionService
             $pdo = $this->getConnection();
             $stmt = $pdo->query('SELECT 1');
             $result = $stmt->fetch();
-            $this->releaseConnection($pdo);
+            // Solution 1: Fermer systématiquement la connexion
+            $this->closeConnection($pdo);
             
             return $result !== false;
         } catch (\Exception $e) {
@@ -176,7 +191,8 @@ class ConnectionService
             $version = $pdo->query('SELECT VERSION() as version')->fetch()['version'];
             $uptime = $pdo->query("SHOW STATUS LIKE 'Uptime'")->fetch()['Value'];
             
-            $this->releaseConnection($pdo);
+            // Solution 1: Fermer systématiquement la connexion
+            $this->closeConnection($pdo);
             
             return [
                 'mysql_version' => $version,
@@ -186,7 +202,8 @@ class ConnectionService
                 'total_connections' => count($this->connections)
             ];
         } catch (\Exception $e) {
-            $this->releaseConnection($pdo);
+            // Solution 1: Fermer systématiquement la connexion même en cas d'erreur
+            $this->closeConnection($pdo);
             throw $e;
         }
     }

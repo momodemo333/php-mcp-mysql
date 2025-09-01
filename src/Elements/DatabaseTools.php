@@ -61,7 +61,8 @@ class DatabaseTools
             $this->logger->error('Erreur lors du listage des bases', ['error' => $e->getMessage()]);
             throw new MySqlMcpException('Impossible de lister les bases de données: ' . $e->getMessage());
         } finally {
-            $this->connectionService->releaseConnection($pdo);
+            // Solution 1: Fermer systématiquement la connexion pour éviter "MySQL server has gone away"
+            $this->connectionService->closeConnection($pdo);
         }
     }
 
@@ -133,7 +134,8 @@ class DatabaseTools
             ]);
             throw new MySqlMcpException('Impossible de lister les tables: ' . $e->getMessage());
         } finally {
-            $this->connectionService->releaseConnection($pdo);
+            // Solution 1: Fermer systématiquement la connexion pour éviter "MySQL server has gone away"
+            $this->connectionService->closeConnection($pdo);
         }
     }
 
@@ -260,7 +262,8 @@ class DatabaseTools
             ]);
             throw new MySqlMcpException('Impossible de lister les noms de tables: ' . $e->getMessage());
         } finally {
-            $this->connectionService->releaseConnection($pdo);
+            // Solution 1: Fermer systématiquement la connexion pour éviter "MySQL server has gone away"
+            $this->connectionService->closeConnection($pdo);
         }
     }
 
